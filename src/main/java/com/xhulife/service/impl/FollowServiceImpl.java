@@ -39,8 +39,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
     public Result follow(Long followUserId, Boolean followed) {
         UserDTO user = UserHolder.getUser();
         if (user == null) {
-            return Result.fail("请先登录");
-        }
+            return Result.fail("请先登录");        }
         Long userId = user.getId();
         if (followUserId == null || userId.equals(followUserId)) {
             return Result.fail("不能关注自己");
