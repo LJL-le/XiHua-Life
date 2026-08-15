@@ -1,0 +1,36 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: xhulife
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/xhulife?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:xhulife}
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 10
+    lettuce:
+      pool:
+        max-active: 10
+        max-idle: 10
+        min-idle: 1
+        time-between-eviction-runs: 10s
+  jackson:
+    default-property-inclusion: non_null # JSON处理时忽略非空字段
+mybatis-plus:
+  type-aliases-package: com.xhulife.entity # 别名扫描包
+logging:
+  level:
+    com.xhulife: debug
+app:
+  dev-mode: ${APP_DEV_MODE:true}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

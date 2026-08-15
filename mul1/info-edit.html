@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>校园档案编辑｜西华生活服务平台</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+  <link href="./css/info.css" rel="stylesheet">
+  <link href="./css/theme.css" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" @click="goBack" ><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title">校园档案编辑&nbsp;&nbsp;&nbsp;</div>
+  </div>
+  <div class="edit-container">
+    <div class="info-box">
+      <div class="info-item">
+        <div class="info-label">头像</div>
+        <div class="info-btn">
+          <img width="35" :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-item">
+        <div class="info-label">昵称</div>
+        <div class="info-btn">
+          <div>{{user.nickName}}</div>
+          <div>
+            <i class="el-icon-arrow-right"></i>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-item">
+        <div class="info-label">个人介绍</div>
+        <div class="info-btn">
+          <div style="overflow: hidden; width: 150px;text-align: right">{{info.introduce || '介绍一下自己'}}</div>
+          <div>
+            <i class="el-icon-arrow-right"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-item">
+        <div class="info-label">性别</div>
+        <div class="info-btn">
+          <div>{{info.gender || '选择'}}</div>
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-item">
+        <div class="info-label">城市</div>
+        <div class="info-btn">
+          <div>{{info.city || '选择'}}</div>
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-item">
+        <div class="info-label">生日</div>
+        <div class="info-btn">
+          <div>{{info.birthday || '添加'}}</div>
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-item">
+        <div class="info-label">我的积分</div>
+        <div class="info-btn">
+          <div>查看积分</div>
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="info-item">
+        <div class="info-label">会员等级</div>
+        <div class="info-btn">
+          <div><i class="el-icon-arrow-right"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+    <div class="info-box" style="padding: 15px">
+      <el-form label-width="70px">
+        <el-form-item label="个人介绍"><el-input type="textarea" maxlength="128" show-word-limit v-model="info.introduce"></el-input></el-form-item>
+        <el-form-item label="城市"><el-input maxlength="32" v-model="info.city"></el-input></el-form-item>
+        <el-form-item label="性别">
+          <el-radio-group v-model="info.gender"><el-radio :label="true">男</el-radio><el-radio :label="false">女</el-radio></el-radio-group>
+        </el-form-item>
+        <el-form-item label="生日"><el-date-picker style="width:100%" value-format="yyyy-MM-dd" v-model="info.birthday"></el-date-picker></el-form-item>
+        <el-button type="primary" style="width:100%" :loading="saving" @click="saveInfo">保存资料</el-button>
+      </el-form>
+    </div>
+  <foot-bar :active-btn="4"></foot-bar>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+
+  const app = new Vue({
+    el: "#app",
+    data: {
+      user: "",
+      info: {},
+      saving: false,
+    },
+    created() {
+      this.checkLogin();
+    },
+    methods: {
+      checkLogin() {
+        // 查询用户信息
+        axios.get("/user/me")
+        .then(({data}) => {
+          this.user = data;
+          axios.get('/user/info/' + data.id).then(({data: info}) => {
+            this.info = info || { userId: this.user.id };
+            this.info.userId = this.user.id;
+          });
+        })
+        .catch(err => {
+          this.$message.error(err);
+          setTimeout(() => location.href = "login.html", 1000)
+        })
+      },
+      goBack(){
+        history.back();
+      },
+      saveInfo() {
+        this.saving = true;
+        this.info.userId = this.user.id;
+        axios.put('/user/info', this.info)
+          .then(() => {
+            sessionStorage.setItem('userInfo', JSON.stringify(this.info));
+            this.$message.success('资料已保存');
+          })
+          .catch(err => this.$message.error(err))
+          .finally(() => { this.saving = false; });
+      }
+    },
+
+  })
+</script>
+</body>
+</html>

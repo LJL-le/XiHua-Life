@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>手机号快捷登录｜西华生活服务平台</title>
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+  <link href="./css/login.css" rel="stylesheet">
+  <link href="./css/theme.css" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+  <div class="login-container">
+    <div class="header">
+      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+      <div class="header-title">手机号快捷登录&nbsp;&nbsp;&nbsp;</div>
+    </div>
+    <div class="content">
+      <div class="login-form">
+        <div style="display: flex; justify-content: space-between">
+          <el-input style="width: 60%" placeholder="请输入手机号" v-model="form.phone"></el-input>
+          <el-button style="width: 38%" @click="sendCode" type="success" :disabled="disabled">{{codeBtnMsg}}</el-button>
+        </div>
+        <div style="height: 5px"></div>
+        <el-input placeholder="请输入验证码" v-model="form.code"></el-input>
+        <div style="text-align: center; color: #8c939d;margin: 5px 0">未注册手机号验证后将自动创建 xhul-ife 账户</div>
+        <el-button @click="login" style="width: 100%; background-color:#5267f7; color: #fff;">登录</el-button>
+        <div style="text-align: right; color:#333333; margin: 5px 0"><a href="/login2.html">账号密码登录</a></div>
+      </div>
+      <div class="login-radio">
+        <div>
+          <input id="readed" type="radio" name="readed" v-model="radio" value="1">
+          <label for="readed"></label>
+        </div>
+        <div>
+          我已阅读并同意
+          平台使用规则与隐私说明
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      radio: "",
+      disabled: false,
+      codeBtnMsg: "发送验证码",
+      form: {}
+    },
+    methods: {
+      login() {
+        if (!this.radio) {
+          this.$message.error("请先确认阅读用户协议！");
+          return;
+        }
+        if (!this.form.phone || !this.form.code) {
+          this.$message.error("手机号和验证码不能为空！");
+          return;
+        }
+        axios.post("/user/login", this.form)
+          .then(({data}) => {
+            if (data) {
+              sessionStorage.setItem("token", data);
+            }
+            location.href = "/index.html";
+          })
+          .catch(err => this.$message.error(err));
+      },
+      goBack() {
+        history.back();
+      },
+      sendCode() {
+        if (!this.form.phone) {
+          this.$message.error("手机号不能为空！");
+          return;
+        }
+        axios.post("/user/code?phone=" + this.form.phone)
+          .then(({data}) => { if (data) this.$message.success("开发验证码：" + data); })
+          .catch(err => {
+            this.$message.error(err);
+          });
+        this.disabled = true;
+        let i = 60;
+        this.codeBtnMsg = (i--) + "秒后可重发";
+        let taskId = setInterval(() => this.codeBtnMsg = (i--) + "秒后可重发", 1000);
+        setTimeout(() => {
+          this.disabled = false;
+          clearInterval(taskId);
+          this.codeBtnMsg = "发送验证码";
+        }, 60000);
+      }
+    }
+  });
+</script>
+</body>
+</html>

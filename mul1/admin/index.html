@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>XHU Life 管理台</title>
+  <link rel="stylesheet" href="../css/element.css">
+  <style>
+    body { margin: 0; background: #f5f7fa; }
+    .wrap { max-width: 1100px; margin: auto; padding: 20px; }
+    .login { max-width: 360px; margin: 100px auto; }
+    .card { background: #fff; padding: 18px; border-radius: 10px; margin-bottom: 16px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 160px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="login card" v-if="!token">
+    <h2>管理员登录</h2>
+    <el-input v-model="login.phone" placeholder="手机号"></el-input><br><br>
+    <el-input v-model="login.password" show-password placeholder="密码"></el-input><br><br>
+    <el-button type="primary" style="width:100%" @click="doLogin">登录</el-button>
+    <p>演示账号：13800000000 / admin123</p>
+  </div>
+  <div class="wrap" v-else>
+    <h1>XHU Life 管理台</h1>
+    <el-tabs v-model="tab">
+      <el-tab-pane label="商铺" name="shops">
+        <div class="card row">
+          <el-input v-model="shop.name" placeholder="名称"></el-input>
+          <el-select v-model="shop.typeId" placeholder="请选择店铺分类" style="width:100%">
+            <el-option v-for="type in shopTypes" :key="type.id" :label="type.name" :value="type.id"></el-option>
+          </el-select>
+          <el-input v-model="shop.address" placeholder="地址"></el-input>
+          <el-button type="primary" @click="saveShop">保存商铺</el-button>
+        </div>
+        <el-table :data="shops">
+          <el-table-column prop="id" label="ID"></el-table-column>
+          <el-table-column prop="name" label="名称"></el-table-column>
+          <el-table-column prop="address" label="地址"></el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="免单活动" name="activities">
+        <div class="card row">
+          <el-input v-model.number="activity.shopId" placeholder="商铺ID"></el-input>
+          <el-input v-model="activity.title" placeholder="标题"></el-input>
+          <el-input v-model.number="activity.totalQuota" placeholder="名额"></el-input>
+          <el-date-picker v-model="activity.beginTime" type="datetime" placeholder="开始" value-format="yyyy-MM-dd HH:mm:ss"></el-date-picker>
+          <el-date-picker v-model="activity.endTime" type="datetime" placeholder="结束" value-format="yyyy-MM-dd HH:mm:ss"></el-date-picker>
+          <el-button type="primary" @click="saveActivity">创建</el-button>
+        </div>
+        <el-table :data="activities">
+          <el-table-column prop="id" label="ID"></el-table-column>
+          <el-table-column prop="title" label="活动"></el-table-column>
+          <el-table-column prop="remainingQuota" label="剩余"></el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="资格核销" name="redeem">
+        <div class="card row">
+          <el-input v-model="redeemCode" placeholder="输入核销码"></el-input>
+          <el-button type="success" @click="redeem">确认核销</el-button>
+        </div>
+        <el-table :data="records">
+          <el-table-column prop="id" label="记录"></el-table-column>
+          <el-table-column prop="userId" label="用户"></el-table-column>
+          <el-table-column prop="redeemCode" label="核销码"></el-table-column>
+          <el-table-column label="状态">
+            <template slot-scope="scope">
+              <el-tag :type="qualificationStatus(scope.row.status).type">
+                {{qualificationStatus(scope.row.status).text}}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane label="用户" name="users">
+        <el-table :data="users">
+          <el-table-column prop="id" label="ID"></el-table-column>
+          <el-table-column prop="phone" label="手机号"></el-table-column>
+          <el-table-column prop="nickName" label="昵称"></el-table-column>
+          <el-table-column prop="role" label="角色"></el-table-column>
+        </el-table>
+      </el-tab-pane>
+    </el-tabs>
+  </div>
+</div>
+<script src="../js/vue.js"></script>
+<script src="../js/axios.min.js"></script>
+<script src="../js/element.js"></script>
+<script>
+axios.defaults.baseURL = '/api';
+axios.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('token');
+  if (token) config.headers.authorization = token;
+  return config;
+});
+axios.interceptors.response.use(response => {
+  if (!response.data.success) return Promise.reject(response.data.errorMsg);
+  return response.data;
+});
+new Vue({
+  el: '#app',
+  data: {
+    token: sessionStorage.getItem('token'),
+    login: {phone: '13800000000', password: 'admin123'},
+    tab: 'shops', shops: [], shopTypes: [], users: [], activities: [], records: [],
+    shop: {}, activity: {status: 1}, redeemCode: ''
+  },
+  created() { if (this.token) this.load(); },
+  methods: {
+    qualificationStatus(status) {
+      return {
+        0: {text: '未使用', type: 'warning'},
+        1: {text: '已核销', type: 'success'},
+        2: {text: '已过期', type: 'info'},
+        3: {text: '已取消', type: 'danger'}
+      }[status] || {text: '未知状态', type: 'info'};
+    },
+    doLogin() {
+      axios.post('/user/login', this.login).then(({data}) => {
+        sessionStorage.setItem('token', data); this.token = data; this.load();
+      }).catch(error => this.$message.error(error));
+    },
+    load() {
+      axios.get('/shop-type/list').then(({data}) => this.shopTypes = data || []);
+      axios.get('/admin/shops').then(({data}) => this.shops = data.records);
+      axios.get('/admin/users').then(({data}) => this.users = data.records);
+      axios.get('/admin/free-qualification/activities').then(({data}) => this.activities = data);
+      axios.get('/admin/free-qualification/records').then(({data}) => this.records = data.records);
+    },
+    saveShop() {
+      if (!this.shop.name) return this.$message.error('请输入商铺名称');
+      if (!this.shop.typeId) return this.$message.error('请选择店铺分类');
+      if (!this.shop.address) return this.$message.error('请输入商铺地址');
+      axios.post('/admin/shops', this.shop).then(() => {
+        this.$message.success('已保存'); this.shop = {}; this.load();
+      }).catch(error => this.$message.error(error));
+    },
+    saveActivity() {
+      axios.post('/admin/free-qualification/activities', this.activity).then(() => {
+        this.$message.success('已创建'); this.activity = {status: 1}; this.load();
+      }).catch(error => this.$message.error(error));
+    },
+    redeem() {
+      axios.post('/admin/free-qualification/records/redeem', {redeemCode: this.redeemCode}).then(() => {
+        this.$message.success('核销成功'); this.redeemCode = ''; this.load();
+      }).catch(error => this.$message.error(error));
+    }
+  }
+});
+</script>
+</body>
+</html>

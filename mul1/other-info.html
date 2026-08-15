@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>校园生活档案｜西华生活服务平台</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+  <link href="./css/info.css" rel="stylesheet">
+  <link href="./css/theme.css" rel="stylesheet">
+
+</head>
+
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title">&nbsp;&nbsp;&nbsp;</div>
+  </div>
+  <div class="basic">
+    <div class="basic-icon">
+      <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+    </div>
+    <div class="basic-info">
+      <div class="name">{{user.nickName}}</div>
+      <span>西华</span>
+    </div>
+    <div class="logout-btn" @click="follow">
+      {{followed ? "取消关注" : "关注"}}
+    </div>
+  </div>
+  <div class="introduce">
+    <span v-if="info.introduce">{{info.introduce}}</span>
+    <span v-else>这位同学还没有留下校园生活签名</span>
+  </div>
+  <div class="content">
+    <el-tabs v-model="activeName" @tab-click="handleClick">
+      <el-tab-pane label="笔记" name="1">
+        <div v-for="b in blogs" :key="b.id" class="blog-item">
+          <div class="blog-img"><img :src="b.images.split(',')[0]" alt=""></div>
+          <div class="blog-info">
+            <div class="blog-title">{{b.title}}</div>
+            <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
+            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
+          </div>
+        </div>
+      </el-tab-pane>
+      <el-tab-pane label="共同关注" name="2">
+        <div>你们都关注了：</div>
+        <div>张三</div>
+        <div>李四</div>
+      </el-tab-pane>
+    </el-tabs>
+  </div>
+  <foot-bar :active-btn="0"></foot-bar>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      util,
+      user: "",
+      loginUser: {},
+      activeName: "1",
+      info: {},
+      blogs: [],
+      followed: false,
+      commonFollows: [],
+    },
+    created() {
+      this.queryUser();
+      this.queryLoginUser();
+    },
+    methods: {
+      queryBlogs() {
+        axios.get("/blog/of/user", {
+            params: {id: this.user.id, current: 1}
+          })
+          .then(({data}) => this.blogs = data)
+          .catch(this.$message.error)
+      },
+      queryLoginUser() {
+        axios.get("/user/me")
+          .then(({data}) => {
+            this.loginUser = data;
+          })
+          .catch(console.log)
+      },
+      queryUser() {
+        let id = util.getUrlParam("id")
+        axios.get("/user/" + id)
+          .then(({data}) => {
+            this.user = data;
+            this.queryUserInfo();
+            this.queryBlogs();
+          })
+          .catch(console.log)
+      },
+      goBack() {
+        history.back();
+      },
+      queryUserInfo(id) {
+        axios.get("/user/info/" + this.user.id)
+          .then(({data}) => {
+            if (!data) {
+              return
+            }
+            this.info = data;
+            sessionStorage.setItem("userInfo", JSON.stringify(data))
+          })
+          .catch(err => {
+            this.$message.error(err);
+          })
+      },
+      queryCommonFollow() {
+        axios.get("/follow/common/" + this.user.id)
+          .then(({data}) => this.commonFollows = data)
+          .catch(err => {
+            this.$message.error(err);
+          })
+      },
+      follow() {
+
+      },
+      handleClick(t) {
+        if (t.name === '2') {
+          this.queryCommonFollow();
+        }
+      }
+    },
+  })
+</script>
+</body>
+
+</html>

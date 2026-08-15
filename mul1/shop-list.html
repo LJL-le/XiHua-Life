@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>xhul-ife | &#35199;&#21326;&#29983;&#27963;&#26381;&#21153;&#24179;&#21488;</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="./css/element.css">
+
+  <link href="./css/shop-list.css" rel="stylesheet">
+  <link href="./css/main.css" rel="stylesheet">
+  <link href="./css/theme.css" rel="stylesheet">
+
+  
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title" v-if="!searchMode">{{typeName}}</div>
+    <div class="header-title search-title" v-else>
+      <el-input size="mini" v-model="searchName" placeholder="&#25628;&#32034;&#21830;&#25143;&#21517;&#31216;" @keyup.enter.native="searchShops"></el-input>
+    </div>
+    <div class="header-search" @click="toggleSearch">
+      <i :class="searchMode ? 'el-icon-close' : 'el-icon-search'"></i>
+    </div>
+  </div>
+  <div class="sort-bar" v-if="!searchMode">
+    <div class="sort-item">
+      <el-dropdown trigger="click" @command="handleCommand">
+      <span class="el-dropdown-link">
+        {{typeName}}<i class="el-icon-arrow-down el-icon--right"></i>
+      </span>
+        <el-dropdown-menu slot="dropdown">
+          <el-dropdown-item v-for="t in types" :key="t.id" :command="t">
+            {{t.name}}
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </el-dropdown>
+    </div>
+    <div class="sort-item" @click="sortAndQuery('')">
+      &#36317;&#31163; <i class="el-icon-arrow-down el-icon--right"></i>
+    </div>
+    <div class="sort-item" @click="sortAndQuery('comments')">
+      &#20154;&#27668; <i class="el-icon-arrow-down el-icon--right"></i>
+    </div>
+    <div class="sort-item" @click="sortAndQuery('score')">
+      &#35780;&#20998; <i class="el-icon-arrow-down el-icon--right"></i>
+    </div>
+  </div>
+  <div class="sort-bar search-actions" v-else>
+    <div class="sort-item search-action" @click="searchShops">&#25628;&#32034;</div>
+    <div class="sort-item search-action" @click="exitSearch">&#36820;&#22238;&#20998;&#31867;</div>
+  </div>
+  <div class="shop-list" @scroll="onScroll">
+    <div class="shop-box" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
+      <div class="shop-img"><img :src="s.images" alt=""></div>
+      <div class="shop-info">
+        <div class="shop-title shop-item">{{s.name}}</div>
+        <div class="shop-rate shop-item" >
+          <el-rate
+              disabled v-model="s.score/10"
+              text-color="#5267f7"
+              show-score
+          ></el-rate>
+          <span>{{s.comments}}&#26465;</span>
+        </div>
+        <div class="shop-area shop-item">
+          <span>{{s.area}}</span>
+          <span v-if="s.distance">{{s.distance < 1000 ? s.distance.toFixed(1) + 'm' : (s.distance/1000).toFixed(1) + 'km'}}</span>
+        </div>
+        <div class="shop-avg shop-item">&#65509;{{s.avgPrice}}/&#20154;</div>
+        <div class="shop-address shop-item">
+          <i class="el-icon-map-location"></i>
+          <span>{{s.address}}</span>
+        </div>
+      </div>
+    </div>
+    <div class="list-state" v-if="isLoading">&#27491;&#22312;&#21152;&#36733;...</div>
+    <div class="list-state" v-else-if="shops.length && !hasMore">&#24050;&#26174;&#31034;&#20840;&#37096;&#24215;&#38138;</div>
+    <div class="list-state" v-else-if="!shops.length">&#26242;&#26080;&#24215;&#38138;&#25968;&#25454;</div>
+  </div>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      util,
+      isReachBottom: false,
+      isLoading: false,
+      hasMore: true,
+      searchMode: false,
+      searchName: "",
+      types: [],
+      shops: [],
+      typeName: "",
+      params: {
+        typeId: 0,
+        current: 1,
+        sortBy: "",
+        x: 0,
+        y: 0
+      }
+    },
+    created() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          this.params.x = pos.coords.longitude;
+          this.params.y = pos.coords.latitude;
+        }, () => {
+          this.params.x = 104.067923;
+          this.params.y = 30.679943;
+        });
+      } else {
+        this.params.x = 104.067923;
+        this.params.y = 30.679943;
+      }
+      this.params.typeId = util.getUrlParam("type");
+      this.typeName = util.getUrlParam("name");
+      if (util.getUrlParam("search") === "1") {
+        this.searchMode = true;
+        this.searchName = this.typeName;
+        this.searchShops();
+      }
+      this.queryTypes();
+      if (this.params.typeId && !this.searchMode) {
+        this.queryShops();
+      }
+    },
+    methods: {
+      queryTypes() {
+        axios.get("/shop-type/list")
+          .then(({data}) => {
+            this.types = data;
+            if (!this.params.typeId && !this.searchMode && data && data.length) {
+              this.params.typeId = data[0].id;
+              this.typeName = data[0].name;
+              this.queryShops();
+            }
+          })
+          .catch(err => {
+            this.$message.error(err)
+          })
+      },
+      queryShops(reset) {
+        if (reset) {
+          this.params.current = 1;
+          this.shops = [];
+          this.hasMore = true;
+          this.isReachBottom = false;
+        }
+        if (this.isLoading || !this.hasMore) {
+          return;
+        }
+        this.isLoading = true;
+        axios.get("/shop/of/type", {
+            params: this.params
+          })
+          .then(({data}) => {
+            if (!data) {
+              return
+            }
+            data.forEach(s => s.images = s.images.split(',')[0]);
+            this.shops = this.shops.concat(data);
+            if (data.length < 5) {
+              this.hasMore = false;
+            } else {
+              this.params.current++;
+            }
+            this.$nextTick(this.ensureScrollable);
+          })
+          .catch(err => {
+            console.log(err);
+            this.$message.error(err)
+          })
+          .finally(() => {
+            this.isLoading = false;
+            this.isReachBottom = false;
+            this.$nextTick(this.ensureScrollable);
+          })
+      },
+      searchShops() {
+        if (!this.searchName) {
+          this.$message.info("\u8bf7\u8f93\u5165\u5546\u6237\u540d\u79f0");
+          return;
+        }
+        this.isLoading = true;
+        this.hasMore = false;
+        axios.get("/shop/of/name", {
+            params: {
+              name: this.searchName,
+              current: 1
+            }
+          })
+          .then(({data}) => {
+            data = data || [];
+            data.forEach(s => s.images = s.images.split(',')[0]);
+            this.shops = data;
+          })
+          .catch(err => {
+            console.log(err);
+            this.$message.error(err)
+          })
+          .finally(() => {
+            this.isLoading = false;
+          })
+      },
+      handleCommand(t) {
+        location.href = "/shop-list.html?type="+t.id+"&name="+t.name;
+      },
+      toggleSearch() {
+        if (this.searchMode) {
+          this.exitSearch();
+        } else {
+          this.searchMode = true;
+          this.searchName = "";
+        }
+      },
+      exitSearch() {
+        this.searchMode = false;
+        this.searchName = "";
+        this.queryShops(true);
+      },
+      sortAndQuery(sortBy) {
+        this.params.sortBy = sortBy;
+        this.queryShops(true);
+      },
+      goBack() {
+        history.back();
+      },
+      toDetail(id) {
+        location.href = "/shop-detail.html?id="+id
+      },
+      ensureScrollable() {
+        if (!this.hasMore || this.isLoading || this.searchMode) {
+          return;
+        }
+        const list = this.$el.querySelector(".shop-list");
+        if (list && list.scrollHeight <= list.offsetHeight + 80) {
+          this.queryShops();
+        }
+      },
+      onScroll(e) {
+        let scrollTop = e.target.scrollTop;
+        let offsetHeight = e.target.offsetHeight;
+        let scrollHeight = e.target.scrollHeight;
+        if(scrollTop + offsetHeight + 120 > scrollHeight && !this.isReachBottom && this.hasMore && !this.isLoading){
+          this.isReachBottom = true
+          this.queryShops();
+        }else{
+          this.isReachBottom = false
+        }
+      },
+    }
+  })
+</script>
+</body>
+</html>

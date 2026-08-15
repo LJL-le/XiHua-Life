@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
+  <title>账号密码登录｜西华生活服务平台</title>
+  <link href="./css/login.css" rel="stylesheet">
+  <link rel="stylesheet" href="./css/element.css">
+</head>
+<body>
+<div id="app">
+  <div class="login-container">
+    <div class="header">
+      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+      <div class="header-title">账号密码登录</div>
+    </div>
+    <div class="content">
+      <div class="login-form">
+        <el-input placeholder="请输入手机号" v-model="form.phone"></el-input>
+        <div style="height:5px"></div>
+        <el-input placeholder="请输入密码" v-model="form.password" show-password @keyup.enter.native="login"></el-input>
+        <el-button @click="login" :loading="loading" style="width:100%;background:#5267f7;color:#fff">登录</el-button>
+        <div style="margin:10px 0;color:#666;font-size:12px;line-height:1.8">
+          演示普通用户：13900000000 / user123<br>
+          演示管理员：13800000000 / admin123
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <el-button size="mini" @click="fillDemoUser">填入普通用户</el-button>
+          <el-button size="mini" @click="fillAdmin">填入管理员</el-button>
+        </div>
+        <div style="text-align:right;margin:5px 0"><a href="/login.html">验证码登录</a></div>
+      </div>
+      <div class="login-radio">
+        <div><input id="readed" type="checkbox" v-model="agreed"><label for="readed"></label></div>
+        <div>我已阅读并同意平台使用规则与隐私说明</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script>
+new Vue({
+  el: '#app',
+  data: {agreed: true, loading: false, form: {phone: '', password: ''}},
+  methods: {
+    login() {
+      if (!this.agreed) return this.$message.error('请先确认阅读平台规则');
+      if (!this.form.phone || !this.form.password) return this.$message.error('请输入手机号和密码');
+      this.loading = true;
+      axios.post('/user/login', this.form).then(({data}) => {
+        sessionStorage.setItem('token', data);
+        location.href = '/info.html';
+      }).catch(error => this.$message.error(error)).finally(() => this.loading = false);
+    },
+    fillDemoUser() { this.form = {phone: '13900000000', password: 'user123'}; },
+    fillAdmin() { this.form = {phone: '13800000000', password: 'admin123'}; },
+    goBack() { history.back(); }
+  }
+});
+</script>
+</body>
+</html>
