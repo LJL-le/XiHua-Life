@@ -22,10 +22,10 @@ public class PasswordEncoder {
         if (encodedPassword == null || rawPassword == null) {
             return false;
         }
-        if(!encodedPassword.contains("@")){
-            throw new RuntimeException("密码格式不正确！");
+        String[] arr = encodedPassword.split("@", -1);
+        if (arr.length != 2 || arr[0].isEmpty() || arr[1].isEmpty()) {
+            return false;
         }
-        String[] arr = encodedPassword.split("@");
         // 获取盐
         String salt = arr[0];
         // 比较
