@@ -15,4 +15,8 @@ class PasswordEncoderTest {
         assertFalse(PasswordEncoder.matches(null, "password"));
         assertFalse(PasswordEncoder.matches("value", null));
     }
+
+    @Test void malformedEncodedPasswordShouldNotCrash() {
+        assertFalse(PasswordEncoder.matches("@", "password"));
+    }
 }
